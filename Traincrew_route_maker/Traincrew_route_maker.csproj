@@ -6,11 +6,16 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>
+    
+    <PropertyGroup Condition="'$(Configuration)'=='Release'">
+        <Optimize>True</Optimize>
+        <DebugType>none</DebugType>
+    </PropertyGroup>
 
     <ItemGroup>
-      <Reference Include="TrainCrewInput">
-        <HintPath>.\DLL\TrainCrewInput.dll</HintPath>
-      </Reference>
+        <Reference Include="TrainCrewInput">
+            <HintPath>.\DLL\TrainCrewInput.dll</HintPath>
+        </Reference>
     </ItemGroup>
 
 </Project>

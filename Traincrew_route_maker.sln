@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Traincrew_test", "Traincrew_test\Traincrew_test.csproj", "{211D4772-3D04-43FA-A2CD-EB8B1EA2E3FC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Traincrew_route_maker/Traincrew_route_maker", "Traincrew_route_maker/Traincrew_route_maker.csproj", "{211D4772-3D04-43FA-A2CD-EB8B1EA2E3FC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
