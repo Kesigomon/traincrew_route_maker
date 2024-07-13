@@ -1,6 +1,7 @@
 ﻿using System.Text;
 
 namespace Traincrew_test;
+
 using TrainCrew;
 
 class Program
@@ -13,70 +14,87 @@ class Program
 
     async Task main()
     {
-        Directory.CreateDirectory("data");
+        const string directoryName = "route_data";
+        Directory.CreateDirectory(directoryName);
         TrainCrewInput.Init();
-        var first = true;
-        var previousGameScreen = TrainCrewInput.gameState.gameScreen;
-        var previousDiaName = "";
-        var stations = new HashSet<string>();
+        var previousSignalName = "";
+        var previousStartMeter = 0f;
+        // 処理済み信号機
+        var signals = new HashSet<string>();
+        // CSVファイルストリーム
         FileStream? fs = null;
         while (true)
         {
+            // Traincrewから情報取得
             var state = TrainCrewInput.GetTrainState();
+            // 内部処理含め次のループまで最小でも15msは間隔を空ける
             var timer = Task.Delay(15);
-            
+
             var gameScreen = TrainCrewInput.gameState.gameScreen;
-            if (first || previousGameScreen is not (GameScreen.MainGame or GameScreen.MainGame_Pause)
-                && gameScreen == GameScreen.MainGame)
+            // 乗務中の場合、ファイルストリームが作成されてなければ(基本的には乗務開始時のみ)
+            if (gameScreen is GameScreen.MainGame or GameScreen.MainGame_Pause && fs == null)
             {
+                // ファイルを作成
+                var filename = $"{directoryName}/{state.diaName}.csv";
+                fs = File.Create(filename);
+                const string txt = "diaName,signalName,StartMeter,EndMeter\n";
+                await WriteString(fs, txt);
+                
+                // 信号情報をリクエスト
                 TrainCrewInput.RequestData(DataRequest.Signal);
-                stations.Clear();
-                first = false;
+                signals.Clear();
+                previousSignalName = "";
+                previousStartMeter = 0f;
             }
-            if(gameScreen is not (GameScreen.MainGame or GameScreen.MainGame_Pause) && fs != null)
+
+            // 乗務終了後、ファイルを閉じる
+            if (gameScreen is not (GameScreen.MainGame or GameScreen.MainGame_Pause) && fs != null)
             {
+                var txt = $"{state.diaName},{previousSignalName},{previousStartMeter},";
+                await WriteString(fs, txt);
                 fs.Close();
                 fs = null;
             }
-            previousGameScreen = gameScreen;
-            
-            
-            if (state.diaName != previousDiaName)
-            {
-                var filename = $"data/{state.diaName}.csv"; 
-                fs = File.Create(filename);
-                const string txt = "name,distance,totalLength,position,beaconSpeed,beaconPosition,beaconType\n";
-                await fs.WriteAsync(Encoding.UTF8.GetBytes(txt).AsMemory(0, txt.Length));
-                previousDiaName = state.diaName;
-            }
+
             foreach (var signal in TrainCrewInput.signals)
             {
-                if(fs == null)
+                if (fs == null)
                 {
                     break;
                 }
+
                 var name = signal.name;
-                if (stations.Contains(name))
+                // 既に記録済み or 停止信号は記録しない(停止信号の場合、当該列車の進路のための信号ではない可能性が高い)
+                if (signals.Contains(name) || (TrainCrewInput.signals.Count >= 2 && signal.phase == "R"))
                 {
                     continue;
                 }
-                foreach (
-                    var body in from beacon in signal.beacons 
-                    let body = $"{name},{signal.distance},{state.TotalLength},{signal.distance + state.TotalLength}," 
-                    select body + $"{beacon.speed},{beacon.distance + state.TotalLength},{beacon.type}\n")
+                var startMeter = state.TotalLength + signal.distance;
+                if (previousSignalName != "")
                 {
-                    var bytes = Encoding.UTF8.GetBytes(body);
-                    await fs.WriteAsync(bytes.AsMemory(0, bytes.Length));
+                    var txt = $"{state.diaName},{previousSignalName},{previousStartMeter},{startMeter}\n";
+                    await WriteString(fs, txt);
                 }
-                stations.Add(name);
+                previousSignalName = name;
+                previousStartMeter = startMeter;
+                signals.Add(name);
             }
-            if(fs != null)
+
+            if (fs != null)
             {
                 await fs.FlushAsync();
             }
-            await timer;
 
+            // 15ms待機
+            await timer;
         }
+
         TrainCrewInput.Dispose();
+    }
+    
+    static ValueTask WriteString(FileStream fs, string txt)
+    {
+        var bytes = Encoding.UTF8.GetBytes(txt);
+        return fs.WriteAsync(bytes.AsMemory(0, bytes.Length));
     }
 }
