@@ -39,7 +39,7 @@ class Program
                 fs = File.Create(filename);
                 const string txt = "diaName,signalName,StartMeter,EndMeter\n";
                 await WriteString(fs, txt);
-                
+
                 // 信号情報をリクエスト
                 TrainCrewInput.RequestData(DataRequest.Signal);
                 signals.Clear();
@@ -66,16 +66,22 @@ class Program
 
                 var name = signal.name;
                 // 既に記録済み or 停止信号は記録しない(停止信号の場合、当該列車の進路のための信号ではない可能性が高い)
-                if (signals.Contains(name) || (TrainCrewInput.signals.Count >= 2 && signal.phase == "R"))
+                if (
+                    signals.Contains(name) // 既に記録済み
+                    || signal.name.Contains("中継") // 中継信号機
+                    || (TrainCrewInput.signals.Count >= 2 && signal.phase == "R") // 停止信号
+                )
                 {
                     continue;
                 }
+
                 var startMeter = state.TotalLength + signal.distance;
                 if (previousSignalName != "")
                 {
                     var txt = $"{state.diaName},{previousSignalName},{previousStartMeter},{startMeter}\n";
                     await WriteString(fs, txt);
                 }
+
                 previousSignalName = name;
                 previousStartMeter = startMeter;
                 signals.Add(name);
@@ -92,7 +98,7 @@ class Program
 
         TrainCrewInput.Dispose();
     }
-    
+
     static ValueTask WriteString(FileStream fs, string txt)
     {
         var bytes = Encoding.UTF8.GetBytes(txt);
