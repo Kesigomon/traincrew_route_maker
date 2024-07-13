@@ -50,7 +50,8 @@ class Program
             // 乗務終了後、ファイルを閉じる
             if (gameScreen is not (GameScreen.MainGame or GameScreen.MainGame_Pause) && fs != null)
             {
-                var txt = $"{state.diaName},{previousSignalName},{previousStartMeter},";
+                // Todo: 終端はこの位置で良い？
+                var txt = $"{state.diaName},{previousSignalName},{previousStartMeter},{state.TotalLength + 20}";
                 await WriteString(fs, txt);
                 fs.Close();
                 fs = null;
