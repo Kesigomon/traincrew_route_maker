@@ -9,7 +9,24 @@ class Program
     private static async Task Main(string[] args)
     {
         Program p = new Program();
-        await p.main();
+        try
+        {
+
+            await p.main();
+        }
+        catch (Exception e)
+        {
+            try
+            {
+                Directory.CreateDirectory("crashlog");
+                await File.WriteAllTextAsync($"crashlog/{DateTime.Now:yyyyMMddHHmmss}.txt", e.ToString());
+            }
+            catch (Exception)
+            {
+                // クラッシュログの出力に失敗した場合は何もしない
+            }
+            TrainCrewInput.Dispose();
+        }
     }
 
     async Task main()
@@ -96,7 +113,6 @@ class Program
             await timer;
         }
 
-        TrainCrewInput.Dispose();
     }
 
     static ValueTask WriteString(FileStream fs, string txt)
