@@ -52,7 +52,7 @@ class Program
             if (gameScreen is GameScreen.MainGame or GameScreen.MainGame_Pause && fs == null)
             {
                 // ファイルを作成
-                var filename = $"{directoryName}/{state.diaName}.csv";
+                var filename = $"{directoryName}/{state.diaName}_{state.CarStates.Count}.csv";
                 fs = File.Create(filename);
                 const string txt = "diaName,signalName,StartMeter,EndMeter\n";
                 await WriteString(fs, txt);
@@ -68,7 +68,8 @@ class Program
             if (gameScreen is not (GameScreen.MainGame or GameScreen.MainGame_Pause) && fs != null)
             {
                 // Todo: 終端はこの位置で良い？
-                var txt = $"{state.diaName},{previousSignalName},{previousStartMeter},{state.TotalLength + 20}";
+                var normalizedSignalName = normalizeSignalName(previousSignalName, state.stationList);
+                var txt = $"{state.diaName},{normalizedSignalName},{previousStartMeter},{state.TotalLength + 20}";
                 await WriteString(fs, txt);
                 fs.Close();
                 fs = null;
@@ -95,7 +96,8 @@ class Program
                 var startMeter = state.TotalLength + signal.distance;
                 if (previousSignalName != "")
                 {
-                    var txt = $"{state.diaName},{previousSignalName},{previousStartMeter},{startMeter}\n";
+                    var normalizedSignalName = normalizeSignalName(previousSignalName, state.stationList);
+                    var txt = $"{state.diaName},{normalizedSignalName},{previousStartMeter},{startMeter}\n";
                     await WriteString(fs, txt);
                 }
 
@@ -112,7 +114,26 @@ class Program
             // 15ms待機
             await timer;
         }
+    }
+    
+    static string normalizeSignalName(string signalName, List<Station> stations)
+    {
+        if(signalName.StartsWith("館浜下り場内1L"))
+        {
+            var station = stations.First(s => s.Name == "館浜");
+            var trackNumber = station.StopPosName[3]; 
+            var signalId = (char)(trackNumber + 'A' - '1');
+            return $"館浜下り場内1L{signalId}";
+        }
+        if(signalName.StartsWith("大道寺上り場内1R"))
+        {
+            var station = stations.First(s => s.Name == "大道寺");
+            var trackNumber = station.StopPosName[4];
+            var signalId = (char)(trackNumber + 'A' - '1');
+            return $"大道寺上り場内1R{signalId}";
+        }
 
+        return signalName;
     }
 
     static ValueTask WriteString(FileStream fs, string txt)
